@@ -49,7 +49,7 @@ contract SimpleAMM {
             liquidityMinted = Math.sqrt(amountA * amountB);
         } else {
             liquidityMinted = Math.min(
-                (AmountA * totalLiquidity) / reserveA,
+                (amountA * totalLiquidity) / reserveA,
                 (amountB * totalLiquidity) / reserveB
             );
         }
@@ -61,5 +61,47 @@ contract SimpleAMM {
         reserveB += amountB;
 
         emit LiquidityAdded(msg.sender, amountA, amountB, liquidityMinted);
+    }
+
+    function swap(
+        uint256 amountIn,
+        address tokenIn
+    ) external returns (uint256 amountOut) {
+        require(amountIn > 0, "Invalid swapa amount");
+        book isTokenA = tokenIn == address(tokenA);
+        require(isTokenA || tokenIn == address(tokenB), "Invalid token");
+
+        (
+            IERC20 tokenInContract,
+            IERC20 tokenOutContract,
+            uint256 reserveIn,
+            uint256 reserveOut
+        ) = isTokenA
+                ? (tokenA, tokenB, reserveA, reserveB)
+                : (tokenB, tokenA, reserveB, reserveA);
+        tokenInContract.transferFrom(msg.sender, address(this), amountIn);
+        uint256 amountInWithFee = (amountIn * 997) / 1000;
+        amountOut =
+            (amountWithFee * reserveOut) /
+            (reserveIn + amountInWithFee);
+
+        require(amountOut > 0, "Insufficient outout amount");
+        tokenOutContract.transfer(msg.sender, amountOut);
+
+        if (isTokenA) {
+            reserveA += amountIn;
+            reserveB -= amountOut;
+        } else {
+            reserveB += amountIn;
+            reserveA -= amountOut;
+        }
+
+        emit Swap(
+            msg.sender,
+            amountIn,
+            amountOut,
+            address(tokenInContract),
+            address(tokenOutContract)
+        );
     }
 }
