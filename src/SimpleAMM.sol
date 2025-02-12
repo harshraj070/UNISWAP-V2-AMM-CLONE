@@ -104,4 +104,22 @@ contract SimpleAMM {
             address(tokenOutContract)
         );
     }
+function removeLiquidity(uint256 liquidityAmount) external returns (uint256 amountA, uint256 amountB) {
+        require(liquidity[msg.sender] >= liquidityAmount, "Not enough liquidity");
+        require(liquidityAmount > 0, "Invalid amount");
+
+        amountA = (liquidityAmount * reserveA) / totalLiquidity;
+        amountB = (liquidityAmount * reserveB) / totalLiquidity;
+        require(amountA > 0 && amountB > 0, "Insufficient amount withdrawn");
+
+        liquidity[msg.sender] -= liquidityAmount;
+        totalLiquidity -= liquidityAmount;
+        reserveA -= amountA;
+        reserveB -= amountB;
+
+        tokenA.transfer(msg.sender, amountA);
+        tokenB.transfer(msg.sender, amountB);
+
+        emit LiquidityRemoved(msg.sender, amountA, amountB, liquidityAmount);
+    }
 }
